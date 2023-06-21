@@ -1,25 +1,51 @@
-const fs = require('fs/promises');
-const path = require('path');
+const mongoose = require('mongoose');
+require('dotenv').config();
+require('colors');
 
-const contactsFilePath = path.join(__dirname, './contacts.json');
+mongoose.connect(process.env.MONGO_URL, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+  .then(() => {
+    console.log('Database connection successful'.green);
+  })
+  .catch((error) => {
+    console.error('Database connection error:'.red, error);
+    process.exit(1);
+  });
+
+const contactSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: [true, 'Set name for contact'],
+  },
+  email: {
+    type: String,
+  },
+  phone: {
+    type: String,
+  },
+  favorite: {
+    type: Boolean,
+    default: false,
+  },
+});
+
+const Contact = mongoose.model('Contact', contactSchema);
 
 const listContacts = async () => {
   try {
-    console.log('Reading contacts file...');
-    const data = await fs.readFile(contactsFilePath, 'utf-8');
-    console.log('File contents:', data);
-    const contacts = JSON.parse(data);
+    const contacts = await Contact.find();
     return contacts;
   } catch (error) {
-    console.error('Error reading contacts file:', error);
+    console.error('Error reading contacts:', error);
     throw new Error(error.message);
   }
 };
 
 const getContactById = async (contactId) => {
   try {
-    const contacts = await listContacts();
-    const contact = contacts.find((item) => item.id === contactId);
+    const contact = await Contact.findById(contactId);
     return contact;
   } catch (error) {
     console.error('Error getting contact by ID:', error);
@@ -27,24 +53,9 @@ const getContactById = async (contactId) => {
   }
 };
 
-const removeContact = async (contactId) => {
-  try {
-    const contacts = await listContacts();
-    const updatedContacts = contacts.filter((item) => item.id !== contactId);
-    await fs.writeFile(contactsFilePath, JSON.stringify(updatedContacts));
-    return contactId;
-  } catch (error) {
-    console.error('Error removing contact:', error);
-    throw new Error(error.message);
-  }
-};
-
 const addContact = async (contact) => {
   try {
-    const contacts = await listContacts();
-    const newContact = { id: Date.now().toString(), ...contact };
-    const updatedContacts = [...contacts, newContact];
-    await fs.writeFile(contactsFilePath, JSON.stringify(updatedContacts));
+    const newContact = await Contact.create(contact);
     return newContact;
   } catch (error) {
     console.error('Error adding contact:', error);
@@ -54,25 +65,33 @@ const addContact = async (contact) => {
 
 const updateContact = async (contactId, updatedData) => {
   try {
-    const contacts = await listContacts();
-    const updatedContacts = contacts.map((item) => {
-      if (item.id === contactId) {
-        return { ...item, ...updatedData };
-      }
-      return item;
-    });
-    await fs.writeFile(contactsFilePath, JSON.stringify(updatedContacts));
-    return updatedData;
+    const updatedContact = await Contact.findByIdAndUpdate(
+      contactId,
+      updatedData,
+      { new: true }
+    );
+    return updatedContact;
   } catch (error) {
     console.error('Error updating contact:', error);
     throw new Error(error.message);
   }
 };
 
+const removeContact = async (contactId) => {
+  try {
+    const removedContact = await Contact.findByIdAndRemove(contactId);
+    return removedContact._id;
+  } catch (error) {
+    console.error('Error removing contact:', error);
+    throw new Error(error.message);
+  }
+};
+
 module.exports = {
+  Contact,
   listContacts,
   getContactById,
-  removeContact,
   addContact,
   updateContact,
+  removeContact,
 };
