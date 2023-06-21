@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 require('dotenv').config();
 require('colors');
 
-mongoose.connect(process.env.MONGO_URL, {
+mongoose.connect(process.env.MONGO_URL || 'mongodb+srv://Oleksandr:SucCubus888@cluster0.v8lgymb.mongodb.net/', {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
