@@ -1,5 +1,4 @@
 const mongoose = require('mongoose');
-const Schema = mongoose.Schema;
 
 const userSchema = new mongoose.Schema({
   name: {
@@ -19,12 +18,7 @@ const userSchema = new mongoose.Schema({
     type: String,
     enum: ['starter', 'pro', 'business'],
     default: 'starter',
-  },
-  owner: {
-    type: Schema.Types.ObjectId,
-    ref: 'user',
-  },
-  token: String,
+  }
 });
 
 const User = mongoose.model('User', userSchema);
