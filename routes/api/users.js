@@ -1,32 +1,11 @@
 const express = require('express');
-const multer = require('multer');
-const path = require('path');
 const bcrypt = require('bcrypt');
+const gravatar = require('gravatar');
 const authenticateToken = require('../../middleware/autMiddleware');
+const multer = require('multer');
 const User = require('../../models/user');
 const Joi = require('joi');
 const jwt = require('jsonwebtoken');
-const Jimp = require('jimp');
-
-const upload = multer({
-  storage: multer.diskStorage({
-    destination: function (req, file, cb) {
-      cb(null, 'public/avatars');
-    },
-    filename: function (req, file, cb) {
-      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-      const ext = path.extname(file.originalname);
-      cb(null, file.fieldname + '-' + uniqueSuffix + ext);
-    },
-  }),
-  fileFilter: function (req, file, cb) {
-    if (file.mimetype.startsWith('image/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only images are allowed'));
-    }
-  },
-});
 
 const router = express.Router();
 
@@ -54,25 +33,15 @@ const generateAuthToken = (user) => {
   return token;
 };
 
-router.post('/register', upload.single('avatar'), async (req, res) => {
+router.post('/register', async (req, res) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({ message: 'No file uploaded' });
-    }
-
     const { name, email, password } = req.body;
-    const avatarPath = path.join(__dirname, '../../public/avatars', req.file.filename);
 
-    const image = await Jimp.read(req.file.path);
-
-    image.resize(250, 250);
-    image.sepia();
-    const font = await Jimp.loadFont(Jimp.FONT_SANS_16_BLACK);
-    image.print(font, 10, 10, 'Hello, Sasha!');
-
-    await image.writeAsync(avatarPath);
-
-    const avatarURL = `/avatars/${req.file.filename}`;
+    const avatarURL = gravatar.url(email, {
+      s: '250',
+      r: 'pg',
+      d: 'identicon',
+    });
 
     const validation = registerSchema.validate({ name, email, password });
     if (validation.error) {
@@ -161,6 +130,8 @@ router.post('/logout', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Logout failed' });
   }
 });
+
+const upload = multer({ dest: 'uploads/' });
 
 router.patch('/avatars', authenticateToken, upload.single('avatar'), async (req, res) => {
   try {
